@@ -54,21 +54,7 @@ It is designed using clean architecture principles, strict separation of concern
 
 ## Architecture Overview
 
-CaptureEngine
-    ↓
-PacketQueue
-    ↓
-PacketProcessor
-    ↓
-PacketParser
-    ↓
-MetricsService
-    ↓
-DetectionManager
-    ↓
-AlertManager
-    ↓
-FastAPI API Layer
+CaptureEngine → PacketQueue → PacketProcessor → PacketParser → MetricsService → DetectionManager → AlertManager → FastAPI API Layer
 
 ### Architectural Principles
 
