@@ -1,0 +1,5 @@
+/* App-level layout — kept minimal; all card styles live in index.css */
+#root {
+  max-width: 1440px;
+  margin: 0 auto;
+}

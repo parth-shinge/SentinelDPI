@@ -1,179 +1,174 @@
 # SentinelDPI
 
-**SentinelDPI** is a modular, multi-threaded Deep Packet Inspection (DPI) engine with pluggable intrusion detection, real-time traffic metrics, alert deduplication, and a FastAPI service layer.
+SentinelDPI is a modular, multi-threaded Deep Packet Inspection (DPI) engine with real-time telemetry streaming, pluggable intrusion detection, structured alerting, and a production-grade React dashboard.
 
-It is designed using clean architecture principles, strict separation of concerns, and dependency injection to ensure extensibility, testability, and production readiness.
+The system is engineered using clean architecture principles, strict separation of concerns, dependency injection, and event-driven communication to ensure scalability, maintainability, and production readiness.
 
 ---
 
-## Key Features
+## Key Capabilities
 
-### Multi-Threaded Capture Pipeline
-- Continuous packet capture (Windows + Npcap)
-- Thread-safe queue between capture and processing layers
-- Graceful start/stop lifecycle management
+### Multi-Threaded Packet Processing
+- Scapy-based packet capture (Windows + Npcap)
+- Dedicated capture and processing threads
+- Thread-safe queue pipeline
+- Graceful lifecycle management
+- No global state
 
-### Clean Parsing Layer
+### Structured Parsing Layer
 - Stateless `PacketParser`
-- Normalized packet feature extraction
-- Protocol-aware handling (TCP, UDP, ICMP, Other)
+- Typed `PacketFeatures` contract
 - Defensive layer handling (never crashes on missing layers)
+- Clear separation from detection logic
 
 ### Pluggable Detection Framework
-- Abstract `BaseDetector`
-- `DetectionManager` orchestrator
-- Sliding-window Port Scan Detector implementation
-- Cooldown-based alert suppression
+- Abstract `BaseDetector` interface
+- `DetectionManager` orchestration
+- Sliding-window Port Scan detection
+- Sustained High Traffic (PPS) detection
+- Zero coupling between detectors
 
-### Real-Time Metrics Engine
-- Total packet count
-- Packets per protocol
-- Top source/destination IP tracking
+### Metrics Engine
+- Total packet tracking
+- Per-protocol distribution
+- Top source/destination tracking
 - Rolling packets-per-second (PPS)
-- Bounded memory usage
+- Bounded in-memory design
 
 ### Alert Management
-- UUID-enriched alert objects
+- UUID-enriched alerts
 - Severity mapping
 - Cooldown-based deduplication
-- Bounded alert history (configurable)
+- Bounded alert history
+- Observer-style listener pattern
 
-### HTTP API Layer (FastAPI)
-- `GET /health`
-- `GET /metrics`
-- `GET /alerts`
-- Read-only snapshot exposure
-- No coupling with packet or detection internals
+### Real-Time Streaming API
+- REST endpoints:
+  - `/health`
+  - `/metrics`
+  - `/alerts`
+- WebSocket endpoint:
+  - `/ws`
+- Event-driven push (no polling)
+- Exponential backoff reconnect logic (frontend)
 
-### Fully Tested
-- 53 unit tests
-- Regression-safe architecture
-- Detection, metrics, alerts, and API covered
+### Production Logging
+- Structured JSON logs
+- Aggregation-ready format
+- No third-party logging frameworks
+
+### Frontend Dashboard
+- React + TypeScript
+- Tailwind CSS design system
+- Animated stat transitions
+- Real-time WebSocket updates
+- Alert toast notifications
+- Threat feed sidebar
+- Auto-scrolling alert table
+- Connection status indicator
+
+### Containerized Deployment
+- Dockerized backend (Python 3.11 slim)
+- Dockerized frontend (multi-stage build + Nginx)
+- docker-compose full stack orchestration
 
 ---
 
 ## Architecture Overview
 
-CaptureEngine → PacketQueue → PacketProcessor → PacketParser → MetricsService → DetectionManager → AlertManager → FastAPI API Layer
+```
+CaptureEngine
+    ↓
+PacketQueue
+    ↓
+PacketProcessor
+    ↓
+PacketParser
+    ↓
+MetricsService
+    ↓
+DetectionManager
+    ↓
+AlertManager
+    ↓
+FastAPI (REST + WebSocket)
+    ↓
+React Dashboard (Real-Time Streaming)
+```
 
-### Architectural Principles
+---
+
+## Local Development
+
+### Backend
+
+```bash
+python -m sentinel_dpi.main
+```
+
+Backend runs at:
+http://127.0.0.1:8000
+
+---
+
+### Frontend
+
+```bash
+cd dashboard
+npm install
+npm run dev
+```
+
+Frontend runs at:
+http://localhost:5173
+
+---
+
+## Docker Deployment
+
+```bash
+docker compose up --build
+```
+
+Frontend:
+http://localhost
+
+Backend:
+http://localhost:8000
+
+---
+
+## Testing
+
+```bash
+python -m pytest tests/ -v
+```
+
+All tests must pass before deployment.
+
+---
+
+## Engineering Principles
 
 - No global state
-- Strict layer separation
-- Dependency injection throughout
-- No business logic in capture layer
+- Strict separation of concerns
+- Dependency injection across layers
 - Bounded memory usage
-- Extensible detector plugin model
-- Read-only API exposure
+- Event-driven architecture
+- Regression-safe test coverage
+- Structured production logging
+- Container-ready deployment
 
 ---
 
-## API Endpoints
+## About
 
-| Method | Endpoint   | Description |
-|--------|------------|------------|
-| GET    | /health    | Service health check |
-| GET    | /metrics   | Real-time traffic statistics |
-| GET    | /alerts    | Recent detection alerts |
+SentinelDPI was built as a systems-focused backend architecture project exploring:
 
-### Example Response: `/health`
-
-json
-{
-  "status": "ok"
-}
-
-### Example Response: `/alerts`
-
-json
-{
-  "total_alerts": 2,
-  "recent_alerts": [
-    {
-      "id": "uuid",
-      "type": "PORT_SCAN",
-      "source_ip": "192.168.1.4",
-      "severity": "HIGH",
-      "timestamp": 1771957120.27
-    }
-  ],
-  "alerts_by_type": {
-    "PORT_SCAN": 2
-  }
-}
-
----
-
-## Installation
-
-### Requirements
-
-- Python 3.11+
-- Windows
-- Npcap (Admin-restricted mode recommended)
-
-### Install Dependencies
-
-pip install -r requirements.txt
-
----
-
-## Running SentinelDPI
-
-python -m sentinel_dpi.main
-
-API available at:
-
-http://127.0.0.1:8000/docs
-
-Press `Ctrl+C` for graceful shutdown.
-
----
-
-## Running Tests
-
-bash
-python -m pytest tests/ -v
-
-All tests should pass.
-
----
-
-## Configuration
-
-All tunables are centralized in:
-
-sentinel_dpi/config/settings.py
-
-Includes:
-
-- Capture settings
-- Detection thresholds
-- Alert cooldown and history
-- API enable/disable toggle
-- Host and port configuration
-
----
-
-## Future Improvements
-
-- Web dashboard (real-time visualization)
-- Persistent alert storage
-- Additional anomaly detectors
-- ML-based detection modules
-- Distributed sensor mode
-- Role-based access control
-
----
-
-## About the Project
-
-SentinelDPI was built as a systems-focused backend project to explore:
-
-- Concurrent architecture design
-- Real-time network traffic processing
-- Sliding-window detection algorithms
+- Concurrent system design
+- Sliding-window anomaly detection
+- Real-time telemetry streaming
 - Alert deduplication strategies
-- Clean dependency injection patterns
-- Service-layer exposure via FastAPI
-- Writing maintainable, testable code
+- Plugin-based detection architecture
+- Full-stack integration via WebSockets
+- Production deployment patterns

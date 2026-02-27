@@ -18,6 +18,7 @@ from sentinel_dpi.core.capture_engine import CaptureEngine
 from sentinel_dpi.core.packet_processor import PacketProcessor
 from sentinel_dpi.core.packet_queue import PacketQueue
 from sentinel_dpi.detection.detection_manager import DetectionManager
+from sentinel_dpi.detection.plugins.high_traffic_detector import HighTrafficDetector
 from sentinel_dpi.detection.plugins.port_scan_detector import PortScanDetector
 from sentinel_dpi.dpi.parser import PacketParser
 from sentinel_dpi.services.alert_manager import AlertManager
@@ -27,12 +28,24 @@ logger = logging.getLogger(__name__)
 
 
 def _configure_logging() -> None:
-    """Set up minimal root-level logging."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    """Set up structured JSON logging."""
+
+    class _JsonFormatter(logging.Formatter):
+        """Emit each log record as a single JSON object."""
+
+        def format(self, record: logging.LogRecord) -> str:
+            import json
+            return json.dumps({
+                "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+            })
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(_JsonFormatter())
+    logging.root.addHandler(handler)
+    logging.root.setLevel(logging.INFO)
 
 
 def main() -> None:
@@ -49,10 +62,19 @@ def main() -> None:
         threshold=settings.port_scan_threshold,
         window_seconds=settings.port_scan_window,
     )
-    detection_manager = DetectionManager(detectors=[port_scan_detector])
-
     # Metrics layer (Sprint 4)
     metrics_service = MetricsService()
+
+    # High-traffic detector (Phase 1)
+    high_traffic_detector = HighTrafficDetector(
+        metrics_service=metrics_service,
+        threshold=settings.high_traffic_threshold,
+        window=settings.high_traffic_window,
+    )
+
+    detection_manager = DetectionManager(
+        detectors=[port_scan_detector, high_traffic_detector]
+    )
 
     # Alert layer (Sprint 5)
     alert_manager = AlertManager(

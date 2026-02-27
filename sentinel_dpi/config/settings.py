@@ -40,7 +40,7 @@ class Settings:
     """
 
     # --- Capture Layer ---
-    interface: str | None = None
+    interface: str | None = r"\Device\NPF_{51E74BDD-4380-4517-925D-DCC87B9EB92D}"
     queue_maxsize: int = 10_000
     processor_timeout: float = 1.0
     bpf_filter: str = ""
@@ -49,6 +49,10 @@ class Settings:
     # --- Detection Layer ---
     port_scan_threshold: int = 20
     port_scan_window: float = 10.0
+
+    # --- High-Traffic Detection ---
+    high_traffic_threshold: float = 50.0
+    high_traffic_window: int = 5
 
     # --- Alert Layer ---
     alert_cooldown: float = 10.0

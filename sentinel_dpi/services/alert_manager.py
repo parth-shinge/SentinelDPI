@@ -11,12 +11,14 @@ from __future__ import annotations
 import logging
 import uuid
 from collections import defaultdict, deque
+from typing import Callable
 
 logger = logging.getLogger(__name__)
 
 # Extensible severity mapping — keyed by alert ``type``.
 _SEVERITY_MAP: dict[str, str] = {
     "PORT_SCAN": "HIGH",
+    "HIGH_TRAFFIC": "HIGH",
 }
 _DEFAULT_SEVERITY = "MEDIUM"
 
@@ -42,6 +44,24 @@ class AlertManager:
 
         # Dedup tracking: {(type, source_ip): last_timestamp}
         self._recent_keys: dict[tuple[str, str | None], float] = {}
+
+        # Listeners notified synchronously on each new stored alert.
+        self._listeners: list[Callable[[dict], None]] = []
+
+    # ------------------------------------------------------------------
+    # Listener API
+    # ------------------------------------------------------------------
+
+    def add_listener(self, callback: Callable[[dict], None]) -> None:
+        """Register a callback invoked with each newly stored alert."""
+        self._listeners.append(callback)
+
+    def remove_listener(self, callback: Callable[[dict], None]) -> None:
+        """Unregister a previously registered callback."""
+        try:
+            self._listeners.remove(callback)
+        except ValueError:
+            pass
 
     # ------------------------------------------------------------------
     # Public API
@@ -91,6 +111,13 @@ class AlertManager:
             self._alerts_by_type[alert_type] += 1
 
             logger.info("ALERT stored: %s", enriched)
+
+            # --- Notify listeners ---------------------------------------
+            for listener in self._listeners:
+                try:
+                    listener(enriched)
+                except Exception:
+                    logger.exception("Alert listener error")
 
     def snapshot(self) -> dict:
         """Return a point-in-time summary of alert history."""
