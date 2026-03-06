@@ -42,6 +42,26 @@ class CaptureEngine:
     # Lifecycle
     # ------------------------------------------------------------------
 
+    def _resolve_interface(self) -> str:
+        """Determine which network interface to capture on.
+
+        Priority:
+            1. ``settings.interface`` if explicitly set.
+            2. Scapy's ``conf.iface`` (auto-detected default).
+        """
+        from scapy.config import conf as scapy_conf
+
+        if self._settings.interface:
+            logger.info(
+                "Using manually configured interface: %s",
+                self._settings.interface,
+            )
+            return self._settings.interface
+
+        default_iface = str(scapy_conf.iface)
+        logger.info("Auto-detected network interface: %s", default_iface)
+        return default_iface
+
     def start(self) -> None:
         """Begin capturing packets.
 
@@ -52,21 +72,33 @@ class CaptureEngine:
             logger.warning("CaptureEngine.start() called while already running")
             return
 
+        iface = self._resolve_interface()
+
         sniffer_kwargs: dict = {
             "prn": self._on_packet,
             "store": False,
+            "iface": iface,
         }
-        if self._settings.interface is not None:
-            sniffer_kwargs["iface"] = self._settings.interface
         if self._settings.bpf_filter:
             sniffer_kwargs["filter"] = self._settings.bpf_filter
 
-        self._sniffer = AsyncSniffer(**sniffer_kwargs)
-        self._sniffer.start()
-        logger.info(
-            "CaptureEngine started on interface=%s",
-            self._settings.interface or "default",
-        )
+        try:
+            self._sniffer = AsyncSniffer(**sniffer_kwargs)
+            self._sniffer.start()
+            logger.info("CaptureEngine started on interface=%s", iface)
+        except Exception:
+            logger.warning(
+                "Failed to capture on '%s', falling back to default interface",
+                iface,
+                exc_info=True,
+            )
+            # Fall back to scapy default.
+            from scapy.config import conf as scapy_conf
+            fallback = str(scapy_conf.iface)
+            sniffer_kwargs["iface"] = fallback
+            self._sniffer = AsyncSniffer(**sniffer_kwargs)
+            self._sniffer.start()
+            logger.info("CaptureEngine started on fallback interface=%s", fallback)
 
     def stop(self) -> None:
         """Stop capturing and wait for the sniffer thread to finish."""

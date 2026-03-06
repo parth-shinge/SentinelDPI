@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { MetricsSnapshot } from "../types/metrics";
+import type { Metrics } from "../types/metrics";
 import type { AlertsSnapshot } from "../types/alerts";
 
 const api = axios.create({
@@ -7,11 +7,13 @@ const api = axios.create({
   timeout: 5000,
 });
 
-export async function getMetrics(): Promise<MetricsSnapshot> {
-  const { data } = await api.get<MetricsSnapshot>("/metrics");
+/** Fetch current metrics snapshot via REST (fallback). */
+export async function getMetrics(): Promise<Metrics> {
+  const { data } = await api.get<Metrics>("/metrics");
   return data;
 }
 
+/** Fetch alert history via REST (fallback). */
 export async function getAlerts(): Promise<AlertsSnapshot> {
   const { data } = await api.get<AlertsSnapshot>("/alerts");
   return data;

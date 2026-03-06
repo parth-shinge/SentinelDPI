@@ -57,15 +57,17 @@ def main() -> None:
     packet_queue = PacketQueue(maxsize=settings.queue_maxsize)
     parser = PacketParser()
 
-    # Detection layer (Sprint 3)
+    # Detection layer
     port_scan_detector = PortScanDetector(
         threshold=settings.port_scan_threshold,
         window_seconds=settings.port_scan_window,
     )
-    # Metrics layer (Sprint 4)
-    metrics_service = MetricsService()
+    # Metrics layer
+    metrics_service = MetricsService(
+        top_talkers_limit=settings.top_talkers_limit,
+    )
 
-    # High-traffic detector (Phase 1)
+    # High-traffic detector
     high_traffic_detector = HighTrafficDetector(
         metrics_service=metrics_service,
         threshold=settings.high_traffic_threshold,
@@ -75,11 +77,17 @@ def main() -> None:
     detection_manager = DetectionManager(
         detectors=[port_scan_detector, high_traffic_detector]
     )
+    logger.info(
+        "Detection layer loaded — %d detector(s): %s",
+        len(detection_manager._detectors),
+        [type(d).__name__ for d in detection_manager._detectors],
+    )
 
-    # Alert layer (Sprint 5)
+    # Alert layer
     alert_manager = AlertManager(
         cooldown=settings.alert_cooldown,
         max_history=settings.alert_max_history,
+        alert_window_seconds=settings.alert_window_seconds,
     )
 
     engine = CaptureEngine(packet_queue=packet_queue, settings=settings)
@@ -98,11 +106,15 @@ def main() -> None:
     processor.start()
     logger.info("SentinelDPI running — press Ctrl+C to stop")
 
-    # --- API layer (Sprint 6) -------------------------------------------
+    # --- API layer ------------------------------------------------------
     if settings.api_enabled:
         app = create_app(
             metrics_service=metrics_service,
             alert_manager=alert_manager,
+            packet_processor=processor,
+            capture_engine=engine,
+            detection_manager=detection_manager,
+            settings=settings,
         )
 
         import uvicorn

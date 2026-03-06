@@ -1,5 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
-import type { MetricsSnapshot } from "../types/metrics";
+import type {
+  TelemetrySnapshot,
+  Metrics,
+  SystemStatusData,
+  TrafficFeedEntry,
+  TopTalkerEntry,
+} from "../types/metrics";
 import type { Alert } from "../types/alerts";
 import StatCard from "../components/StatCard";
 import ProtocolChart from "../components/ProtocolChart";
@@ -8,6 +14,11 @@ import type { PPSDataPoint } from "../components/PPSChart";
 import AlertsTable from "../components/AlertsTable";
 import AlertToast from "../components/AlertToast";
 import ThreatFeed from "../components/ThreatFeed";
+import ThreatLevel from "../components/ThreatLevel";
+import TopTalkers from "../components/TopTalkers";
+import TrafficFeed from "../components/TrafficFeed";
+import DetectionTimeline from "../components/DetectionTimeline";
+import SystemStatus from "../components/SystemStatus";
 import { useWebSocket, type ConnectionStatus } from "../hooks/useWebSocket";
 
 const WS_URL = "ws://127.0.0.1:8000/ws";
@@ -58,11 +69,15 @@ function StatusDot({ status }: { status: ConnectionStatus }) {
 /** WebSocket message envelope from the backend. */
 interface WsMessage {
   event: "metrics" | "alert";
-  data: MetricsSnapshot | Alert;
+  data: TelemetrySnapshot | Alert;
 }
 
 export default function Dashboard() {
-  const [metrics, setMetrics] = useState<MetricsSnapshot | null>(null);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [topTalkers, setTopTalkers] = useState<TopTalkerEntry[]>([]);
+  const [trafficFeed, setTrafficFeed] = useState<TrafficFeedEntry[]>([]);
+  const [threatLevel, setThreatLevel] = useState<"LOW" | "MEDIUM" | "HIGH">("LOW");
+  const [systemStatus, setSystemStatus] = useState<SystemStatusData | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [totalAlerts, setTotalAlerts] = useState(0);
   const [ppsHistory, setPpsHistory] = useState<PPSDataPoint[]>([]);
@@ -72,14 +87,19 @@ export default function Dashboard() {
       const msg: WsMessage = JSON.parse(event.data as string);
 
       if (msg.event === "metrics") {
-        const m = msg.data as MetricsSnapshot;
-        setMetrics(m);
+        const t = msg.data as TelemetrySnapshot;
+
+        setMetrics(t.metrics);
+        setTopTalkers(t.top_talkers ?? []);
+        setTrafficFeed(t.traffic_feed ?? []);
+        setThreatLevel(t.threat_level ?? "LOW");
+        setSystemStatus(t.system_status ?? null);
 
         // Append to rolling PPS history.
         setPpsHistory((prev) => {
           const next: PPSDataPoint = {
             time: new Date().toLocaleTimeString(),
-            pps: m.packets_per_second,
+            pps: t.metrics.packets_per_second,
           };
           const updated = [...prev, next];
           return updated.length > PPS_HISTORY_SIZE
@@ -110,7 +130,7 @@ export default function Dashboard() {
             Sentinel<span className="text-accent">DPI</span>
           </h1>
           <p className="text-sm text-gray-500 mt-1.5 tracking-wide">
-            Network Monitoring Dashboard
+            Security Operations Center
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -130,8 +150,9 @@ export default function Dashboard() {
       <div className="flex gap-5">
         {/* Main content */}
         <div className="flex-1 min-w-0">
-          {/* Stat cards */}
-          <section className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+          {/* Top row — Threat Level + Stat cards */}
+          <section className="grid grid-cols-1 sm:grid-cols-4 gap-5 mb-8">
+            <ThreatLevel level={threatLevel} />
             <StatCard
               label="Total Packets"
               value={metrics?.total_packets.toLocaleString() ?? "—"}
@@ -146,21 +167,28 @@ export default function Dashboard() {
             />
           </section>
 
-          {/* Charts row */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+          {/* Middle row — Charts + Top Talkers */}
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
             <ProtocolChart data={metrics?.packets_per_protocol ?? {}} />
             <PPSChart data={ppsHistory} />
+            <TopTalkers talkers={topTalkers} />
           </section>
 
-          {/* Alerts table */}
-          <section>
+          {/* Bottom row — Alerts + Traffic Feed + Detection Timeline */}
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <AlertsTable alerts={alerts} />
+            <TrafficFeed feed={trafficFeed} />
+            <DetectionTimeline alerts={alerts} />
           </section>
         </div>
 
-        {/* Threat Feed sidebar — hidden on small screens */}
-        <aside className="hidden xl:block w-80 shrink-0">
+        {/* Sidebar — hidden on small screens */}
+        <aside className="hidden xl:flex xl:flex-col w-80 shrink-0 gap-5">
           <ThreatFeed alerts={alerts} />
+          <SystemStatus
+            wsStatus={connectionStatus}
+            backendStatus={systemStatus}
+          />
         </aside>
       </div>
 

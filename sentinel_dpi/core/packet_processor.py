@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import queue
 import threading
+from collections import deque
 from typing import TYPE_CHECKING
 
 from sentinel_dpi.config.settings import Settings
@@ -63,6 +64,12 @@ class PacketProcessor:
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
 
+        # Live traffic feed — bounded ring buffer of recent packets.
+        self._traffic_feed: deque[dict] = deque(
+            maxlen=settings.traffic_feed_size,
+        )
+        self._feed_lock = threading.Lock()
+
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
@@ -94,6 +101,11 @@ class PacketProcessor:
         """Return ``True`` if the processor thread is currently running."""
         return self._thread is not None and self._thread.is_alive()
 
+    def get_traffic_feed(self) -> list[dict]:
+        """Return the last N processed packets (thread-safe)."""
+        with self._feed_lock:
+            return list(self._traffic_feed)
+
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
@@ -112,6 +124,16 @@ class PacketProcessor:
 
             try:
                 features = self._parser.parse(packet)
+
+                # Record in traffic feed ring buffer.
+                with self._feed_lock:
+                    self._traffic_feed.append({
+                        "src_ip": features["src_ip"] or "unknown",
+                        "dst_ip": features["dst_ip"] or "unknown",
+                        "protocol": features["protocol"],
+                        "timestamp": features["timestamp"],
+                    })
+
                 if self._metrics_service is not None:
                     self._metrics_service.update(features)
                 if self._detection_manager is not None:

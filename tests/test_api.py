@@ -84,8 +84,16 @@ class TestWebSocketMetrics:
             raw = ws.receive_text()
             msg = json.loads(raw)
             assert msg["event"] == "metrics"
-            assert "total_packets" in msg["data"]
-            assert "packets_per_second" in msg["data"]
+            # Structured payload — core metrics nested under "metrics" key.
+            assert "metrics" in msg["data"]
+            assert "total_packets" in msg["data"]["metrics"]
+            assert "packets_per_second" in msg["data"]["metrics"]
+            # Top-level telemetry fields.
+            assert "top_talkers" in msg["data"]
+            assert "threat_level" in msg["data"]
+            assert "system_status" in msg["data"]
+            assert "alert_activity" in msg["data"]
+            assert "alerts" in msg["data"]
 
 
 class TestWebSocketAlerts:

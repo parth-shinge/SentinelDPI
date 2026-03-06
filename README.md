@@ -1,174 +1,294 @@
 # SentinelDPI
 
-SentinelDPI is a modular, multi-threaded Deep Packet Inspection (DPI) engine with real-time telemetry streaming, pluggable intrusion detection, structured alerting, and a production-grade React dashboard.
+A **real-time Deep Packet Inspection (DPI) and network monitoring system** with a **Security Operations Center (SOC) style dashboard** built using **Python, FastAPI, React, and Docker**.
 
-The system is engineered using clean architecture principles, strict separation of concerns, dependency injection, and event-driven communication to ensure scalability, maintainability, and production readiness.
-
----
-
-## Key Capabilities
-
-### Multi-Threaded Packet Processing
-- Scapy-based packet capture (Windows + Npcap)
-- Dedicated capture and processing threads
-- Thread-safe queue pipeline
-- Graceful lifecycle management
-- No global state
-
-### Structured Parsing Layer
-- Stateless `PacketParser`
-- Typed `PacketFeatures` contract
-- Defensive layer handling (never crashes on missing layers)
-- Clear separation from detection logic
-
-### Pluggable Detection Framework
-- Abstract `BaseDetector` interface
-- `DetectionManager` orchestration
-- Sliding-window Port Scan detection
-- Sustained High Traffic (PPS) detection
-- Zero coupling between detectors
-
-### Metrics Engine
-- Total packet tracking
-- Per-protocol distribution
-- Top source/destination tracking
-- Rolling packets-per-second (PPS)
-- Bounded in-memory design
-
-### Alert Management
-- UUID-enriched alerts
-- Severity mapping
-- Cooldown-based deduplication
-- Bounded alert history
-- Observer-style listener pattern
-
-### Real-Time Streaming API
-- REST endpoints:
-  - `/health`
-  - `/metrics`
-  - `/alerts`
-- WebSocket endpoint:
-  - `/ws`
-- Event-driven push (no polling)
-- Exponential backoff reconnect logic (frontend)
-
-### Production Logging
-- Structured JSON logs
-- Aggregation-ready format
-- No third-party logging frameworks
-
-### Frontend Dashboard
-- React + TypeScript
-- Tailwind CSS design system
-- Animated stat transitions
-- Real-time WebSocket updates
-- Alert toast notifications
-- Threat feed sidebar
-- Auto-scrolling alert table
-- Connection status indicator
-
-### Containerized Deployment
-- Dockerized backend (Python 3.11 slim)
-- Dockerized frontend (multi-stage build + Nginx)
-- docker-compose full stack orchestration
+SentinelDPI captures live network packets, processes them through a detection pipeline, and streams telemetry to a real-time dashboard for security monitoring and threat visibility.
 
 ---
 
-## Architecture Overview
+## 🚀 Features
+
+* 📡 **Live Packet Capture** using Scapy
+* 📊 **Real-Time SOC Dashboard**
+* ⚡ **WebSocket Telemetry Streaming**
+* 🛡 **Detection Plugins Architecture**
+* 📈 **Traffic Analytics**
+* 🚨 **Alert Management System**
+* 🧠 **Threat Level Monitoring**
+* 🐳 **Docker Deployment Support**
+
+---
+
+## 🖥 Dashboard
+
+The SentinelDPI dashboard provides real-time network visibility similar to a Security Operations Center (SOC).
+
+**Dashboard Widgets**
+
+* Threat Level Indicator
+* Total Packets
+* Packets per Second
+* Protocol Distribution
+* Top Talkers (Most Active IPs)
+* Live Traffic Feed
+* Detection Timeline
+* Alerts Table
+* System Status Monitor
+
+Example Dashboard View:
+
+![SentinelDPI Dashboard](./assets/dashboard.png)
+
+---
+
+## 🏗 System Architecture
+
+SentinelDPI uses a modular packet processing pipeline:
 
 ```
 CaptureEngine
-    ↓
+     ↓
 PacketQueue
-    ↓
+     ↓
 PacketProcessor
-    ↓
+     ↓
 PacketParser
-    ↓
+     ↓
 MetricsService
-    ↓
+     ↓
 DetectionManager
-    ↓
+     ↓
 AlertManager
-    ↓
-FastAPI (REST + WebSocket)
-    ↓
-React Dashboard (Real-Time Streaming)
+     ↓
+FastAPI + WebSocket
+     ↓
+React SOC Dashboard
+```
+
+### Component Overview
+
+| Component            | Description                                        |
+| -------------------- | -------------------------------------------------- |
+| **CaptureEngine**    | Captures live network packets using Scapy          |
+| **PacketQueue**      | Thread-safe queue between capture and processing   |
+| **PacketProcessor**  | Processes packets and extracts structured features |
+| **PacketParser**     | Converts packets into normalized data              |
+| **MetricsService**   | Tracks traffic metrics and statistics              |
+| **DetectionManager** | Runs detection plugins                             |
+| **AlertManager**     | Handles alert creation, deduplication, and history |
+| **FastAPI API**      | Exposes REST and WebSocket endpoints               |
+| **React Dashboard**  | Displays real-time telemetry                       |
+
+---
+
+## 🧠 Detection Capabilities
+
+Current detection plugins include:
+
+### Port Scan Detector
+
+Detects suspicious port scanning activity from source IPs.
+
+### High Traffic Detector
+
+Detects abnormal traffic spikes based on packet rate thresholds.
+
+The plugin-based architecture allows new detectors to be added easily.
+
+---
+
+## 📡 Real-Time Telemetry
+
+Telemetry is streamed to the dashboard via WebSocket every second.
+
+Example payload:
+
+```json
+{
+  "metrics": {...},
+  "top_talkers": [...],
+  "traffic_feed": [...],
+  "threat_level": "MEDIUM",
+  "system_status": {...},
+  "alert_activity": [...],
+  "alerts": [...]
+}
 ```
 
 ---
 
-## Local Development
+## 🛠 Tech Stack
 
 ### Backend
 
-```bash
-python -m sentinel_dpi.main
-```
-
-Backend runs at:
-http://127.0.0.1:8000
-
----
+* Python
+* FastAPI
+* Scapy
+* Threading
 
 ### Frontend
 
-```bash
-cd dashboard
+* React
+* TypeScript
+* Tailwind CSS
+* Chart.js
+
+### Deployment
+
+* Docker
+* Docker Compose
+* Nginx
+
+---
+
+## ⚙ Installation (Local Development)
+
+### 1. Clone the repository
+
+```
+git clone https://github.com/parth-shinge/SentinelDPI.git
+cd SentinelDPI
+```
+
+---
+
+### 2. Setup Backend
+
+Create a virtual environment:
+
+```
+python -m venv venv
+```
+
+Activate it:
+
+Windows
+
+```
+venv\Scripts\activate
+```
+
+Install dependencies:
+
+```
+pip install -r requirements.txt
+```
+
+Run the backend:
+
+```
+python main.py
+```
+
+---
+
+### 3. Setup Frontend
+
+Navigate to the frontend folder:
+
+```
+cd frontend
+```
+
+Install dependencies:
+
+```
 npm install
+```
+
+Run the dashboard:
+
+```
 npm run dev
 ```
 
-Frontend runs at:
-http://localhost:5173
-
 ---
 
-## Docker Deployment
+## 🐳 Running with Docker
 
-```bash
-docker compose up --build
+To run the full stack using Docker:
+
+```
+docker-compose up --build
 ```
 
-Frontend:
-http://localhost
+Then open the dashboard:
 
-Backend:
-http://localhost:8000
-
----
-
-## Testing
-
-```bash
-python -m pytest tests/ -v
+```
+http://localhost:3000
 ```
 
-All tests must pass before deployment.
+---
+
+## 🌐 Network Interface Configuration
+
+SentinelDPI captures packets from a specified network interface.
+
+In `settings.py`:
+
+```python
+# Network interface used for packet capture.
+# Example values: "Wi-Fi", "Ethernet", or a raw Npcap device like r"\Device\NPF_{GUID}"
+
+interface: str | None = "Wi-Fi"
+```
+
+If packet capture does not work, update this value to match your system's active network adapter.
 
 ---
 
-## Engineering Principles
+## 🧪 Tests
 
-- No global state
-- Strict separation of concerns
-- Dependency injection across layers
-- Bounded memory usage
-- Event-driven architecture
-- Regression-safe test coverage
-- Structured production logging
-- Container-ready deployment
+Run backend tests:
+
+```
+pytest tests/
+```
 
 ---
 
-## About
+## 📂 Project Structure
 
-SentinelDPI was built as a systems-focused backend architecture project exploring:
+```
+sentinel_dpi/
+│
+├── api/
+├── core/
+├── detection/
+├── dpi/
+├── services/
+│
+frontend/
+│
+docker/
+tests/
+```
 
-- Concurrent system design
-- Sliding-window anomaly detection
-- Real-time telemetry streaming
-- Alert deduplication strategies
-- Plugin-based detection architecture
-- Full-stack integration via WebSockets
-- Production deployment patterns
+---
+
+## 📈 Future Improvements
+
+Potential future enhancements include:
+
+* GeoIP attacker visualization
+* Machine learning anomaly detection
+* Historical traffic analytics
+* Persistent alert storage
+* Multi-node monitoring
+
+---
+
+## 📜 License
+
+This project is intended for **educational and portfolio purposes**.
+
+---
+
+## 👨‍💻 Author
+
+**Parth Shinge**
+
+Computer Science & Engineering Student
+
+GitHub:
+https://github.com/parth-shinge

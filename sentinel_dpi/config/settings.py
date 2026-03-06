@@ -33,6 +33,12 @@ class Settings:
         alert_cooldown: Suppression window for duplicate alerts.
         alert_max_history: Maximum alerts stored in memory.
 
+    Telemetry Settings:
+        top_talkers_limit: Number of top source IPs to include.
+        traffic_feed_size: Max entries in the live traffic feed ring buffer.
+        alert_window_seconds: Rolling window for threat-level computation.
+        ws_update_interval: Seconds between WebSocket telemetry ticks.
+
     API Settings:
         api_enabled: Whether to start the HTTP API server.
         api_host: Host address for the API server.
@@ -40,7 +46,9 @@ class Settings:
     """
 
     # --- Capture Layer ---
-    interface: str | None = r"\Device\NPF_{51E74BDD-4380-4517-925D-DCC87B9EB92D}"
+    interface: str | None = None
+    # Network interface used for packet capture.
+    # Example values: "Wi-Fi", "Ethernet", or a raw Npcap device like r"\Device\NPF_{GUID}"
     queue_maxsize: int = 10_000
     processor_timeout: float = 1.0
     bpf_filter: str = ""
@@ -58,7 +66,13 @@ class Settings:
     alert_cooldown: float = 10.0
     alert_max_history: int = 1000
 
+    # --- Telemetry Layer ---
+    top_talkers_limit: int = 5
+    traffic_feed_size: int = 50
+    alert_window_seconds: int = 60
+    ws_update_interval: float = 1.0
+
     # --- API Layer ---
     api_enabled: bool = True
-    api_host: str = "127.0.0.1"
+    api_host: str = "0.0.0.0"
     api_port: int = 8000
