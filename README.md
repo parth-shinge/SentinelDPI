@@ -177,7 +177,7 @@ pip install -r requirements.txt
 Run the backend:
 
 ```
-python main.py
+python -m sentinel_dpi.main
 ```
 
 ---
@@ -187,7 +187,7 @@ python main.py
 Navigate to the frontend folder:
 
 ```
-cd frontend
+cd dashboard
 ```
 
 Install dependencies:
